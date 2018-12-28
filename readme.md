@@ -7,7 +7,9 @@ We attempt to provide a unified summary, by pulling together multiple events, as
 
 ![Build](build.gif)
 
-
+### Fork changes ###
+ - fixed issues (original code gave errors, slack api updates + code issues)
+ - private channels support added
 
 ## Configuration / Customization
 
@@ -16,12 +18,26 @@ No configuration is necessary per pipeline.  As part of the CF Stack, we subscri
 When creating the CloudFormation stack, you can customize:
 
 - `SlackChannel` (defaults to `builds`).
+- `SlackChannelType` (defaults to `public`).
 - `SlackBotName` (defaults to `PipelineBuildBot`).
 - `SlackBotIcon` (defaults to `:robot_face:` 🤖 ).
 
-Additionally, you must provide both a `SlackOAuthAccessToken` and a `SlackBotUserOAuthAccessToken`, (see [BotUsers](https://api.slack.com/bot-users) for creating a slack bot user with an OAuth token). If you have the legacy integration token, just add that token to both fields. It is required to add the permission scope 'Access user’s public channels' (channels:history).
+Additionally, you must provide slack OAuth tokens (check next section on how to get it)
+- `SlackOAuthAccessToken` 
+- `SlackBotUserOAuthAccessToken`
 
-Add 'Access user’s public channels' scope on your slack application OAuth & Permissions page.
+If you have the legacy integration token, just add that token to both fields.
+
+### Slack configuration
+- create an app (or use existing app)
+- create a bot user (see [BotUsers](https://api.slack.com/bot-users) for creating a slack bot user with an OAuth token)
+- specify following scopes on your slack application OAuth & Permissions page: 
+    - `channels:history ` (to search messages in public channels)
+    - `groups:history` (to search messages in private channels)
+    - `bot` (ability to invite bot to channels)
+- add bot user to the desired channel
+- copy OAuth tokens into CloudFormation stack
+
 
 ## How it works
 
@@ -50,4 +66,4 @@ Policies:
         Resource: '*'
 ```
 
-So we can retrieve information about all pipelines and builds.  See [template.yml](https://github.com/ogrodnek/code-pipeline-slack/blob/master/template.yml) for more detail.
+So we can retrieve information about all pipelines and builds.  See [template.yml](https://github.com/AndreyMarchuk/code-pipeline-slack/blob/master/template.yml) for more detail.
