@@ -8,12 +8,6 @@ We attempt to provide a unified summary, by pulling together multiple events, as
 ![Build](build.gif)
 
 
-## Launch
-
-| us-east-1 | us-west-2 |
-| --------- | --------- |
-| [![Launch](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CodePipelineSlackNotifier&templateURL=https://s3.amazonaws.com/code-pipeline-slack-us-east-1/template.yml) | [![Launch](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=CodePipelineSlackNotifier&templateURL=https://s3-us-west-2.amazonaws.com/code-pipeline-slack-us-west-2/template.yml) |
-
 
 ## Configuration / Customization
 
@@ -26,6 +20,8 @@ When creating the CloudFormation stack, you can customize:
 - `SlackBotIcon` (defaults to `:robot_face:` 🤖 ).
 
 Additionally, you must provide both a `SlackOAuthAccessToken` and a `SlackBotUserOAuthAccessToken`, (see [BotUsers](https://api.slack.com/bot-users) for creating a slack bot user with an OAuth token). If you have the legacy integration token, just add that token to both fields. It is required to add the permission scope 'Access user’s public channels' (channels:history).
+
+Add 'Access user’s public channels' scope on your slack application OAuth & Permissions page.
 
 ## How it works
 
