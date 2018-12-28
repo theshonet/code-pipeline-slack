@@ -1,7 +1,12 @@
 import json
 import logging
+import os
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+VERBOSE = os.getenv("VERBOSE", False)
+if VERBOSE:
+  logging.basicConfig()
 
 class CodeBuildInfo(object):
   def __init__(self, pipeline, buildId):

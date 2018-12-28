@@ -15,6 +15,10 @@ Parameters:
     Type: String
     MinLength: 1
     Default: builds
+  SlackChannelType:
+    Type: String
+    Default: "public"
+    AllowedValues: ["public", "private"]
   SlackBotName:
     MinLength: 1
     Type: String
@@ -31,7 +35,7 @@ Resources:
       Runtime: python2.7
       Timeout: 30
       MemorySize: 256
-      CodeUri: ./target/pkg/lambda.zip
+      CodeUri: ./lambda.zip
       Handler: notifier.run
       ReservedConcurrentExecutions: 1
       Environment:
@@ -40,6 +44,8 @@ Resources:
           SLACK_BOT_TOKEN: !Ref SlackBotUserOAuthAccessToken
           SLACK_BOT_NAME: !Ref SlackBotName
           SLACK_BOT_ICON: !Ref SlackBotIcon
+          SLACK_CHANNEL: !Ref SlackChannel
+          SLACK_CHANNEL_TYPE: !Ref SlackChannelType
 
       Policies:
         - AWSLambdaBasicExecutionRole

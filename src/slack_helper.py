@@ -2,14 +2,20 @@ from slackclient import SlackClient
 import os
 import json
 import logging
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 sc = SlackClient(os.getenv("SLACK_TOKEN"))
 sc_bot = SlackClient(os.getenv("SLACK_BOT_TOKEN"))
 SLACK_CHANNEL = os.getenv("SLACK_CHANNEL", "builds2")
+SLACK_CHANNEL_TYPE = os.getenv("SLACK_CHANNEL_TYPE", "public")
 SLACK_BOT_NAME = os.getenv("SLACK_BOT_NAME", "BuildBot")
 SLACK_BOT_ICON = os.getenv("SLACK_BOT_ICON", ":robot_face:")
+VERBOSE = os.getenv("VERBOSE", False)
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+if VERBOSE:
+  logging.basicConfig()
+
 
 CHANNEL_CACHE = {}
 
@@ -17,28 +23,38 @@ def find_channel(name):
   if name in CHANNEL_CACHE:
     return CHANNEL_CACHE[name]
 
-  r = sc.api_call("channels.list", exclude_archived=1)
+  channel_type = 'private_channel' if SLACK_CHANNEL_TYPE.upper() == 'PRIVATE' else 'public_channel'
+
+  r = sc_bot.api_call("conversations.list", exclude_archived=1, types=channel_type)
   if 'error' in r:
-    logger.error("error: {}".format(r['error']))
+    logger.error("error getting channel with name '"+name+"': {}".format(r['error']))
   else:
       for ch in r['channels']:
         if ch['name'] == name:
-          CHANNEL_CACHE[name] = ch['id']
-          return ch['id']
+          CHANNEL_CACHE[name] = (ch['id'], ch['is_private'])
+          return CHANNEL_CACHE[name]
   
-  return None
+  return (None, None)
 
-def find_msg(ch):
-  return sc.api_call('channels.history', channel=ch)  
+def find_msg(ch, is_private):
+  method = 'groups.history' if is_private else 'channels.history'
+  return sc.api_call(method, channel=ch)
 
 def find_my_messages(ch_name, user_name=SLACK_BOT_NAME):
-  ch_id = find_channel(ch_name)
-  msg = find_msg(ch_id)
+  ch_id, is_private = find_channel(ch_name)
+  if not ch_id:
+    logger.error("error getting channel")
+    return
+  
+  print("Channel id = ", ch_id)
+  msg = find_msg(ch_id, is_private)
   if 'error' in msg:
-    logger.error("error: {}".format(msg['error']))
+    logger.error("error fetching msg for channel {}: {}".format(ch_id, msg['error']))
   else:
     for m in msg['messages']:
       if m.get('username') == user_name:
+        if VERBOSE:
+          print("Found message: ", m)
         yield m
 
 MSG_CACHE = {}
@@ -64,9 +80,17 @@ def msg_fields(m):
       yield f
 
 def post_build_msg(msgBuilder):
+  
+  ch_id, is_private = find_channel(SLACK_CHANNEL)
+  if VERBOSE:
+    print("Channel id = ", ch_id)
+  
+  # update existing message
   if msgBuilder.messageId:
-    ch_id = find_channel(SLACK_CHANNEL)
+    
     msg = msgBuilder.message()
+    if VERBOSE:
+      print("Updating existing message")
     r = update_msg(ch_id, msgBuilder.messageId, msg)
     logger.info(json.dumps(r, indent=2))
     if r['ok']:
@@ -74,11 +98,13 @@ def post_build_msg(msgBuilder):
       MSG_CACHE[msgBuilder.buildInfo.executionId] = r['message']
     return r
   
-  r = send_msg(SLACK_CHANNEL, msgBuilder.message())
-  if r['ok']:
+  if VERBOSE:
+    print("New message")
+  r = send_msg(ch_id, msgBuilder.message())
+  #if r['ok']:
     # TODO: are we caching this ID?
     #MSG_CACHE[msgBuilder.buildInfo.executionId] = r['ts']
-    CHANNEL_CACHE[SLACK_CHANNEL] = r['channel']
+    #CHANNEL_CACHE[SLACK_CHANNEL] = (r['channel'], is_private)
 
   return r
 

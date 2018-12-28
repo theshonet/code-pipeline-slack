@@ -5,10 +5,11 @@ import json
 import boto3
 import time
 
-# from test_events import TEST_EVENTS, TEST_ERROR_EVENTS
+#from test_events import TEST_EVENTS, TEST_ERROR_EVENTS
 from build_info import BuildInfo, CodeBuildInfo
-from slack_helper import post_build_msg, find_message_for_build
+from slack_helper import post_build_msg, find_message_for_build, VERBOSE
 from message_builder import MessageBuilder
+from pprint import pprint
 
 # import re
 # import sys
@@ -27,9 +28,10 @@ def findRevisionInfo(info):
   return None
 
 
+# return (stageName, executionId, actionStateDict) if event executionId matches latest pipeline execution
 def pipelineFromBuild(codeBuildInfo):
   r = client.get_pipeline_state(name=codeBuildInfo.pipeline)
-
+  
   for s in r['stageStates']:
     for a in s['actionStates']:
       executionId = a.get('latestExecution', {}).get('externalExecutionId')
@@ -41,6 +43,11 @@ def pipelineFromBuild(codeBuildInfo):
 
 
 def processCodePipeline(event):
+  if not 'execution-id' in event['detail']:
+    if VERBOSE: 
+      print("Skipping due to no executionId")
+    return
+  
   buildInfo = BuildInfo.fromEvent(event)
   existing_msg = find_message_for_build(buildInfo)
   builder = MessageBuilder(buildInfo, existing_msg)
@@ -53,8 +60,20 @@ def processCodePipeline(event):
   post_build_msg(builder)
 
 def processCodeBuild(event):
+  if not 'additional-information' in event['detail']:
+    if VERBOSE: 
+      print("Skipping due to no additional-information")
+    return
+  
   cbi = CodeBuildInfo.fromEvent(event)
+  
+  if VERBOSE: 
+    pprint(vars(cbi))
+  
   (stage, pid, actionStates) = pipelineFromBuild(cbi)
+  
+  if VERBOSE: 
+    print(stage, pid, actionStates)
 
   if not pid:
     return
@@ -83,7 +102,9 @@ def process(event):
 
 def run(event, context):
   #print(json.dumps(event, indent=2, default=str))
-  m = process(event)
+  if VERBOSE:
+    print(json.dumps(event))
+  process(event)
 
 if __name__ == "__main__":
   with open ('test-event.json') as f:
