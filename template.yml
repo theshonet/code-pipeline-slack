@@ -32,7 +32,7 @@ Resources:
   Notifier:
     Type: AWS::Serverless::Function
     Properties:
-      Runtime: python2.7
+      Runtime: python3.7
       Timeout: 30
       MemorySize: 256
       CodeUri: ./lambda.zip
