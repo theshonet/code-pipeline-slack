@@ -5,110 +5,109 @@ import json
 import boto3
 import time
 
-#from test_events import TEST_EVENTS, TEST_ERROR_EVENTS
-from build_info import BuildInfo, CodeBuildInfo
-from slack_helper import post_build_msg, find_message_for_build, VERBOSE
-from message_builder import MessageBuilder
+from src.build_info import BuildInfo, CodeBuildInfo
+from src.message_builder import MessageBuilder
+from .slack_helper import post_build_msg, find_message_for_build, VERBOSE
 from pprint import pprint
-
-# import re
-# import sys
 
 client = boto3.client('codepipeline')
 
-def findRevisionInfo(info):
-  r = client.get_pipeline_execution(
-    pipelineName=info.pipeline,
-    pipelineExecutionId=info.executionId
-  )['pipelineExecution']
 
-  revs = r.get('artifactRevisions',[])
-  if len(revs) > 0:
-      return revs[0]
-  return None
+def find_revision_info(info):
+    r = client.get_pipeline_execution(
+        pipelineName=info.pipeline,
+        pipelineExecutionId=info.executionId
+    )['pipelineExecution']
+
+    revs = r.get('artifactRevisions', [])
+    if len(revs) > 0:
+        return revs[0]
+    return None
 
 
 # return (stageName, executionId, actionStateDict) if event executionId matches latest pipeline execution
-def pipelineFromBuild(codeBuildInfo):
-  r = client.get_pipeline_state(name=codeBuildInfo.pipeline)
-  
-  for s in r['stageStates']:
-    for a in s['actionStates']:
-      executionId = a.get('latestExecution', {}).get('externalExecutionId')
-      if executionId and codeBuildInfo.buildId.endswith(executionId):
-        pe = s['latestExecution']['pipelineExecutionId']
-        return (s['stageName'], pe, a)
+def pipeline_from_build(code_build_info):
+    r = client.get_pipeline_state(name=code_build_info.pipeline)
 
-  return (None, None, None)
+    for s in r['stageStates']:
+        for a in s['actionStates']:
+            execution_id = a.get('latestExecution', {}).get('externalExecutionId')
+            if execution_id and code_build_info.buildId.endswith(execution_id):
+                pe = s['latestExecution']['pipelineExecutionId']
+                return s['stageName'], pe, a
+
+    return None, None, None
 
 
-def processCodePipeline(event):
-  if not 'execution-id' in event['detail']:
-    if VERBOSE: 
-      print("Skipping due to no executionId")
-    return
-  
-  buildInfo = BuildInfo.fromEvent(event)
-  existing_msg = find_message_for_build(buildInfo)
-  builder = MessageBuilder(buildInfo, existing_msg)
-  builder.updatePipelineEvent(event)
+def process_code_pipeline(event):
+    if 'execution-id' not in event['detail']:
+        if VERBOSE:
+            print("Skipping due to no executionId")
+        return
 
-  if builder.needsRevisionInfo():
-    revision = findRevisionInfo(buildInfo)
-    builder.attachRevisionInfo(revision)
-  
-  post_build_msg(builder)
+    build_info = BuildInfo.from_event(event)
+    existing_msg = find_message_for_build(build_info)
+    builder = MessageBuilder(build_info, existing_msg)
+    builder.update_pipeline_event(event)
 
-def processCodeBuild(event):
-  if not 'additional-information' in event['detail']:
-    if VERBOSE: 
-      print("Skipping due to no additional-information")
-    return
-  
-  cbi = CodeBuildInfo.fromEvent(event)
-  
-  if VERBOSE: 
-    pprint(vars(cbi))
-  
-  (stage, pid, actionStates) = pipelineFromBuild(cbi)
-  
-  if VERBOSE: 
-    print(stage, pid, actionStates)
+    if builder.needs_revision_info():
+        revision = find_revision_info(build_info)
+        builder.attach_revision_info(revision)
 
-  if not pid:
-    return
+    post_build_msg(builder)
 
-  buildInfo = BuildInfo(pid, cbi.pipeline)
 
-  existing_msg = find_message_for_build(buildInfo)
-  builder = MessageBuilder(buildInfo, existing_msg)
+def process_code_build(event):
+    if 'additional-information' not in event['detail']:
+        if VERBOSE:
+            print("Skipping due to no additional-information")
+        return
 
-  if 'phases' in event['detail']['additional-information']:
-    phases = event['detail']['additional-information']['phases']
-    builder.updateBuildStageInfo(stage, phases, actionStates)
-  
-  logs = event['detail'].get('additional-information', {}).get('logs')
-  if logs:
-    builder.attachLogs(event['detail']['additional-information']['logs'])
-    
-  post_build_msg(builder)
+    cbi = CodeBuildInfo.from_event(event)
+
+    if VERBOSE:
+        pprint(vars(cbi))
+
+    (stage, pid, actionStates) = pipeline_from_build(cbi)
+
+    if VERBOSE:
+        print(stage, pid, actionStates)
+
+    if not pid:
+        return
+
+    build_info = BuildInfo(pid, cbi.pipeline)
+
+    existing_msg = find_message_for_build(build_info)
+    builder = MessageBuilder(build_info, existing_msg)
+
+    if 'phases' in event['detail']['additional-information']:
+        phases = event['detail']['additional-information']['phases']
+        builder.update_build_stage_info(stage, phases, actionStates)
+
+    logs = event['detail'].get('additional-information', {}).get('logs')
+    if logs:
+        builder.attach_logs(event['detail']['additional-information']['logs'])
+
+    post_build_msg(builder)
 
 
 def process(event):
-  if event['source'] == "aws.codepipeline":
-    processCodePipeline(event)
-  if event['source'] == "aws.codebuild":
-    processCodeBuild(event)
+    if event['source'] == "aws.codepipeline":
+        process_code_pipeline(event)
+    if event['source'] == "aws.codebuild":
+        process_code_build(event)
+
 
 def run(event, context):
-  #print(json.dumps(event, indent=2, default=str))
-  if VERBOSE:
-    print(json.dumps(event))
-  process(event)
+    if VERBOSE:
+        print(json.dumps(event))
+    process(event)
+
 
 if __name__ == "__main__":
-  with open ('test-event.json') as f:
-      events = json.load(f)
-      for e in events:
-        run(e, {})
-        time.sleep(1)
+    with open('test-event.json') as f:
+        events = json.load(f)
+        for e in events:
+            run(e, {})
+            time.sleep(1)
