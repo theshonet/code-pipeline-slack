@@ -9,12 +9,11 @@ SLACK_CHANNEL = os.getenv("SLACK_CHANNEL", "builds2")
 SLACK_CHANNEL_TYPE = os.getenv("SLACK_CHANNEL_TYPE", "public")
 SLACK_BOT_NAME = os.getenv("SLACK_BOT_NAME", "BuildBot")
 SLACK_BOT_ICON = os.getenv("SLACK_BOT_ICON", ":robot_face:")
-VERBOSE = os.getenv("VERBOSE", False)
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-if VERBOSE:
-    logging.basicConfig()
+
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOGLEVEL)
 
 CHANNEL_CACHE = {}
 
@@ -55,8 +54,7 @@ def find_my_messages(ch_name, user_name=SLACK_BOT_NAME):
     else:
         for m in msg['messages']:
             if m.get('username') == user_name:
-                if VERBOSE:
-                    print("Found message: ", m)
+                logger.debug("Found message: ", m)
                 yield m
 
 
@@ -88,24 +86,21 @@ def msg_fields(message):
 
 def post_build_msg(msg_builder):
     ch_id, is_private = find_channel(SLACK_CHANNEL)
-    if VERBOSE:
-        print("Channel id = ", ch_id)
+    logger.debug("Channel id = ", ch_id)
 
     # update existing message
     if msg_builder.messageId:
 
         msg = msg_builder.message()
-        if VERBOSE:
-            print("Updating existing message")
+        logger.debug("Updating existing message")
         r = update_msg(ch_id, msg_builder.messageId, msg)
-        logger.info(json.dumps(r, indent=2))
+        logger.debug(json.dumps(r, indent=2))
         if r['ok']:
             r['message']['ts'] = r['ts']
             MSG_CACHE[msg_builder.buildInfo.executionId] = r['message']
         return r
 
-    if VERBOSE:
-        print("New message")
+    logger.debug("New message")
     r = send_msg(ch_id, msg_builder.message())
     # if r['ok']:
     # TODO: are we caching this ID?

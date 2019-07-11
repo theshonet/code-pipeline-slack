@@ -4,12 +4,20 @@ from __future__ import print_function
 import json
 import boto3
 import time
+import logging
+
+from pprint import pprint
 
 from build_info import BuildInfo, CodeBuildInfo
 from message_builder import MessageBuilder
-from slack_helper import post_build_msg, find_message_for_build, VERBOSE
+from slack_helper import post_build_msg, find_message_for_build
 
-from pprint import pprint
+
+logger = logging.getLogger()
+
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOGLEVEL)
+
 
 client = boto3.client('codepipeline')
 
@@ -42,8 +50,7 @@ def pipeline_from_build(code_build_info):
 
 def process_code_pipeline(event):
     if 'execution-id' not in event['detail']:
-        if VERBOSE:
-            print("Skipping due to no executionId")
+        logger.debug("Skipping due to no executionId")
         return
 
     build_info = BuildInfo.from_event(event)
@@ -60,19 +67,16 @@ def process_code_pipeline(event):
 
 def process_code_build(event):
     if 'additional-information' not in event['detail']:
-        if VERBOSE:
-            print("Skipping due to no additional-information")
+        logger.debug("Skipping due to no additional-information")
         return
 
     cbi = CodeBuildInfo.from_event(event)
 
-    if VERBOSE:
-        pprint(vars(cbi))
+    logger.debug(vars(cbi))
 
     (stage, pid, actionStates) = pipeline_from_build(cbi)
 
-    if VERBOSE:
-        print(stage, pid, actionStates)
+    logger.debug(stage, pid, actionStates)
 
     if not pid:
         return
@@ -101,8 +105,7 @@ def process(event):
 
 
 def run(event, context):
-    if VERBOSE:
-        print(json.dumps(event))
+    logger.debug(json.dumps(event))
     process(event)
 
 

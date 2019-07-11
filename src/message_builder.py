@@ -15,12 +15,12 @@ class MessageBuilder(object):
         self.messageId = None
 
         if message:
-            logger.info(json.dumps(message, indent=2))
+            logger.debug(json.dumps(message, indent=2))
             att = message['attachments'][0]
             self.fields = att['fields']
             self.actions = att.get('actions', [])
             self.messageId = message['ts']
-            logger.info("Actions {}".format(self.actions))
+            logger.debug("Actions {}".format(self.actions))
         else:
             self.fields = [
                 {"title": build_info.pipeline,

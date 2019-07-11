@@ -3,11 +3,9 @@ import logging
 import os
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
-VERBOSE = os.getenv("VERBOSE", False)
-if VERBOSE:
-    logging.basicConfig()
+LOGLEVEL = os.environ.get('LOGLEVEL', 'WARNING').upper()
+logging.basicConfig(level=LOGLEVEL)
 
 
 class CodeBuildInfo(object):
@@ -17,7 +15,7 @@ class CodeBuildInfo(object):
 
     @staticmethod
     def from_event(event):
-        logger.info(json.dumps(event, indent=2))
+        logger.debug(json.dumps(event, indent=2))
         # strip off leading 'codepipeline/'
         pipeline = event['detail']['additional-information']['initiator'][13:]
         bid = event['detail']['build-id']
@@ -50,9 +48,9 @@ class BuildInfo(object):
             detail = event['detail']
             return BuildInfo(detail['execution-id'], detail['pipeline'])
         if event['source'] == "aws.codebuild":
-            logger.info(json.dumps(event, indent=2))
+            logger.debug(json.dumps(event, indent=2))
             ph = BuildInfo.pull_phase_info(event)
-            logger.info(json.dumps(ph, indent=2))
+            logger.debug(json.dumps(ph, indent=2))
 
         return None
 
