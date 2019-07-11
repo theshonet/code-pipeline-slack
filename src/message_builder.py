@@ -109,7 +109,7 @@ class MessageBuilder(object):
             self.find_or_create_part("Build Context", short=False)['value'] = " ".join(context)
 
         pp = [fmt_p(p) for p in phases if show_p(p)]
-        si['value'] = " ".join(pp)
+        si['value'] = "\n".join(pp)
 
     def update_status_info(self, stage_info, stage, status):
         sm = OrderedDict()
