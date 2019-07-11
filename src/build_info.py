@@ -30,7 +30,7 @@ class BuildNotification(object):
 
 
 class BuildInfo(object):
-    def __init__(self, execution_id, pipeline, status):
+    def __init__(self, execution_id, pipeline, status=None):
         self.status = status
         self.revisionInfo = None
         self.executionId = execution_id
