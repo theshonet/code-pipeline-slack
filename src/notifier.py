@@ -5,9 +5,10 @@ import json
 import boto3
 import time
 
-from src.build_info import BuildInfo, CodeBuildInfo
-from src.message_builder import MessageBuilder
-from .slack_helper import post_build_msg, find_message_for_build, VERBOSE
+from build_info import BuildInfo, CodeBuildInfo
+from message_builder import MessageBuilder
+from slack_helper import post_build_msg, find_message_for_build, VERBOSE
+
 from pprint import pprint
 
 client = boto3.client('codepipeline')
