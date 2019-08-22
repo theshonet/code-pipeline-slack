@@ -17,16 +17,16 @@ Parameters:
     Default: builds
   SlackChannelType:
     Type: String
-    Default: "public"
-    AllowedValues: ["public", "private"]
+    Default: 'public'
+    AllowedValues: ['public', 'private']
   SlackBotName:
     MinLength: 1
     Type: String
-    Default: PipelineBuildBot
+    Default: CodepipelineBot
   SlackBotIcon:
     MinLength: 1
     Type: String
-    Default: ":robot_face:"
+    Default: ':robot_face:'
 
 Resources:
   Notifier:
@@ -66,5 +66,5 @@ Resources:
           Properties:
             Pattern:
               source:
-              - aws.codepipeline
-              - aws.codebuild
+                - aws.codepipeline
+                - aws.codebuild
